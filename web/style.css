@@ -1,0 +1,765 @@
+/* ==========================================================================
+   JARVIS LUXURY HUD STYLESHEET
+   Aesthetic: Warm Luxury Precision (Charcoal, Cream/Beige, Umber, Saddle Brown, Tan)
+   Animations: GPU-Accelerated Dual-Ring Rotations, Breathing Pulse, Spring Island
+   ========================================================================== */
+
+:root {
+    --bg-charcoal: #121212;
+    --surface-charcoal: #1A1A1A;
+    --text-cream: #F5F5DC;
+    --accent-tan: #D2B48C;
+    --accent-saddle: #8B4513;
+    --accent-umber: #5D4037;
+    --accent-gold: #E6BE8A;
+    --glass-bg: rgba(245, 245, 220, 0.03);
+    --glass-border: rgba(245, 245, 220, 0.06);
+    --glass-glow: rgba(139, 69, 19, 0.15);
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-charcoal);
+    color: var(--text-cream);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Atmospheric Ambient Canvas (Radial Low-Alpha 0.12 Background Glow) */
+#ambient-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Main Container */
+.hud-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1300px;
+    padding: 24px 32px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+}
+
+/* ==========================================================================
+   1. Spring-Physics Dynamic Island Insignia
+   ========================================================================== */
+.hud-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    position: sticky;
+    top: 16px;
+    z-index: 100;
+}
+
+.island-badge {
+    background: rgba(26, 26, 26, 0.92);
+    border: 1px solid rgba(245, 245, 220, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 16px rgba(210, 180, 140, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 9999px;
+    height: 42px;
+    min-width: 48px;
+    width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, border-color 0.3s ease;
+}
+
+.island-badge:hover,
+.island-badge.expanded {
+    width: 250px;
+}
+
+.island-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+#island-icon-canvas {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+}
+
+.island-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent-tan);
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    user-select: none;
+}
+
+.island-badge:hover .island-label,
+.island-badge.expanded .island-label {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ==========================================================================
+   2. Multi-Axis Precision Chronometer Dial
+   ========================================================================== */
+.dial-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.dial-wrapper {
+    position: relative;
+    width: 520px;
+    height: 520px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Breathing Focus Pulse (FastOutSlowInEasing harmonic oscillation 6s reverse) */
+.dial-pulse-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: breathingPulse 6s cubic-bezier(0.4, 0.0, 0.2, 1) infinite alternate;
+    will-change: transform, opacity;
+}
+
+@keyframes breathingPulse {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.82;
+    }
+    100% {
+        transform: scale(1.0);
+        opacity: 1.0;
+    }
+}
+
+/* Common Dial Ring Layout */
+.dial-ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* Outer Ring (20% Speed Clockwise: 60s Linear Cycle) */
+.dial-outer-ring {
+    border: 1px solid rgba(245, 245, 220, 0.04);
+    animation: rotateClockwise 60s linear infinite;
+}
+
+.dial-outer-ring::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: rgba(210, 180, 140, 0.35);
+    border-right-color: rgba(210, 180, 140, 0.15);
+    filter: drop-shadow(0 0 6px rgba(210, 180, 140, 0.3));
+}
+
+/* Main 120-Tick Procedural Ring (Full 360deg 12s Linear Cycle) */
+.dial-main-ticks {
+    animation: rotateClockwise 12s linear infinite;
+}
+
+#ticks-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* Inner Counter-Rotating Ring (-360deg over 20s Linear Cycle) */
+.dial-inner-ring {
+    width: 75%;
+    height: 75%;
+    top: 12.5%;
+    left: 12.5%;
+    animation: rotateCounterClockwise 20s linear infinite;
+}
+
+.inner-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.inner-circle-stroke {
+    fill: none;
+    stroke: rgba(245, 245, 220, 0.08);
+    stroke-width: 1;
+}
+
+.node-pip {
+    fill: var(--accent-tan);
+    opacity: 0.6;
+    filter: drop-shadow(0 0 4px rgba(210, 180, 140, 0.5));
+}
+
+/* Center Reticle (Independent 50% Speed Rotation: 24s Linear Cycle) */
+.dial-reticle {
+    width: 35%;
+    height: 35%;
+    top: 32.5%;
+    left: 32.5%;
+    animation: rotateClockwise 24s linear infinite;
+}
+
+.reticle-line {
+    position: absolute;
+    background: rgba(210, 180, 140, 0.28);
+}
+
+.reticle-h {
+    top: 50%;
+    left: 15%;
+    width: 70%;
+    height: 1px;
+    transform: translateY(-50%);
+}
+
+.reticle-v {
+    top: 15%;
+    left: 50%;
+    width: 1px;
+    height: 70%;
+    transform: translateX(-50%);
+}
+
+/* Center HUD Information Core */
+.dial-center-core {
+    position: relative;
+    z-index: 10;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(26, 26, 26, 0.95) 0%, rgba(18, 18, 18, 0.98) 100%);
+    border: 1px solid rgba(245, 245, 220, 0.08);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 0 30px rgba(139, 69, 19, 0.12);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+.dial-center-core:hover {
+    transform: scale(1.03);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 0 40px rgba(210, 180, 140, 0.25);
+}
+
+.core-system-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent-tan);
+    opacity: 0.7;
+    margin-bottom: 4px;
+}
+
+.core-title {
+    font-family: var(--font-heading);
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--text-cream);
+    text-shadow: 0 0 12px rgba(245, 245, 220, 0.3);
+}
+
+.core-subtext {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--text-cream);
+    opacity: 0.55;
+    margin-top: 6px;
+}
+
+.core-status-pill {
+    margin-top: 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    background: rgba(210, 180, 140, 0.12);
+    color: var(--accent-tan);
+    border: 1px solid rgba(210, 180, 140, 0.25);
+}
+
+/* Keyframe Rotations */
+@keyframes rotateClockwise {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes rotateCounterClockwise {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+}
+
+/* ==========================================================================
+   3. Luxury Glassmorphic Cards Grid
+   ========================================================================== */
+.cards-section {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.glass-card {
+    position: relative;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 26px 28px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(245, 245, 220, 0.15);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 0 20px var(--glass-glow);
+}
+
+/* Warm Radial Gradient Corner Disc */
+.card-glow-disc {
+    position: absolute;
+    bottom: -30px;
+    right: -30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(20px);
+}
+
+.disc-circadian { background: radial-gradient(circle, rgba(139, 69, 19, 0.35) 0%, transparent 70%); }
+.disc-shield { background: radial-gradient(circle, rgba(210, 180, 140, 0.3) 0%, transparent 70%); }
+.disc-tasks { background: radial-gradient(circle, rgba(93, 64, 55, 0.35) 0%, transparent 70%); }
+.disc-analytics { background: radial-gradient(circle, rgba(230, 190, 138, 0.3) 0%, transparent 70%); }
+.disc-telem { background: radial-gradient(circle, rgba(139, 69, 19, 0.3) 0%, transparent 70%); }
+
+.card-header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-category {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent-tan);
+    opacity: 0.8;
+}
+
+.status-indicator, .completion-rate, .telemetry-speed {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(245, 245, 220, 0.05);
+    color: var(--text-cream);
+    border: 1px solid rgba(245, 245, 220, 0.08);
+}
+
+.card-body {
+    position: relative;
+    z-index: 1;
+}
+
+.metric-huge {
+    font-family: var(--font-body);
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--text-cream);
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+}
+
+.metric-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-cream);
+    opacity: 0.45;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+}
+
+.metric-details {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-cream);
+    opacity: 0.7;
+}
+
+.metric-details strong {
+    color: var(--accent-tan);
+}
+
+/* Shield Toggle Button */
+.shield-toggle-btn, .brief-btn {
+    background: rgba(210, 180, 140, 0.12);
+    border: 1px solid rgba(210, 180, 140, 0.3);
+    color: var(--accent-tan);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shield-toggle-btn:hover, .brief-btn:hover {
+    background: var(--accent-tan);
+    color: var(--bg-charcoal);
+    box-shadow: 0 0 12px rgba(210, 180, 140, 0.4);
+}
+
+.shield-toggle-btn.active {
+    background: rgba(139, 69, 19, 0.3);
+    border-color: var(--accent-saddle);
+    color: var(--accent-gold);
+}
+
+/* Task List */
+.task-input-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.task-input-bar input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(245, 245, 220, 0.1);
+    color: var(--text-cream);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: var(--font-body);
+    outline: none;
+}
+
+.task-input-bar input:focus {
+    border-color: var(--accent-tan);
+}
+
+.task-input-bar button {
+    background: var(--accent-tan);
+    color: var(--bg-charcoal);
+    border: none;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.task-list {
+    list-style: none;
+    max-height: 120px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(245, 245, 220, 0.02);
+    border: 1px solid rgba(245, 245, 220, 0.04);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.task-item.completed {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+.task-item-priority {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(210, 180, 140, 0.15);
+    color: var(--accent-tan);
+}
+
+.task-item-complete-btn {
+    background: transparent;
+    border: 1px solid rgba(245, 245, 220, 0.2);
+    color: var(--text-cream);
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Telemetry Grid */
+.telem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.telem-item {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(245, 245, 220, 0.04);
+    padding: 10px 14px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.telem-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--accent-tan);
+    opacity: 0.7;
+}
+
+.telem-val {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text-cream);
+    margin-top: 4px;
+}
+
+/* ==========================================================================
+   4. Command Console Footer
+   ========================================================================== */
+.console-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.console-bar {
+    display: flex;
+    align-items: center;
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid rgba(245, 245, 220, 0.12);
+    border-radius: 16px;
+    padding: 8px 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.console-prompt {
+    font-family: var(--font-mono);
+    color: var(--accent-tan);
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 12px;
+}
+
+#cli-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-cream);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+}
+
+.mic-btn, .send-btn {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mic-btn {
+    background: rgba(210, 180, 140, 0.15);
+    border: 1px solid rgba(210, 180, 140, 0.3);
+    color: var(--accent-tan);
+    margin-right: 8px;
+}
+
+.mic-btn.active {
+    background: rgba(139, 69, 19, 0.4);
+    border-color: var(--accent-saddle);
+    color: var(--accent-gold);
+}
+
+.send-btn {
+    background: var(--accent-tan);
+    border: none;
+    color: var(--bg-charcoal);
+}
+
+.send-btn:hover {
+    background: var(--text-cream);
+    box-shadow: 0 0 12px rgba(245, 245, 220, 0.4);
+}
+
+.console-output {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--accent-tan);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(245, 245, 220, 0.05);
+    padding: 12px 18px;
+    border-radius: 12px;
+    min-height: 48px;
+}
+
+/* ==========================================================================
+   5. Modal Backdrop
+   ========================================================================== */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-backdrop.open {
+    display: flex;
+}
+
+.modal-card {
+    background: #181818;
+    border: 1px solid rgba(210, 180, 140, 0.3);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 32px rgba(139, 69, 19, 0.3);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 600px;
+    padding: 28px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    font-family: var(--font-heading);
+    color: var(--text-cream);
+    letter-spacing: 2px;
+}
+
+#modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--accent-tan);
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.modal-body {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-cream);
+    white-space: pre-wrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dial-wrapper {
+        width: 340px;
+        height: 340px;
+    }
+    .dial-center-core {
+        width: 160px;
+        height: 160px;
+    }
+    .core-title {
+        font-size: 24px;
+    }
+    .cards-section {
+        grid-template-columns: 1fr;
+    }
+}

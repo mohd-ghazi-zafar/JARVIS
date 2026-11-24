@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS Autonomous HUD | Precision Chronometer Core</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+    <!-- Atmospheric Ambient Canvas -->
+    <canvas id="ambient-canvas"></canvas>
+
+    <div class="hud-container">
+        <!-- Header: Dynamic Island Insignia -->
+        <header class="hud-header">
+            <div id="dynamic-island" class="island-badge" title="Click to toggle Shield / Circadian posture">
+                <div class="island-content">
+                    <canvas id="island-icon-canvas" width="28" height="28"></canvas>
+                    <span id="island-label" class="island-label">JARVIS STANDBY</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Chronometer Stage -->
+        <section class="dial-section">
+            <div class="dial-wrapper">
+                <div class="dial-pulse-container" id="dial-pulse">
+                    <!-- Outer Decorative Arc Ring (20% Speed Clockwise) -->
+                    <div class="dial-ring dial-outer-ring" id="ring-outer"></div>
+
+                    <!-- Main Procedural 120-Tick Ring (Clockwise 12s Cycle) -->
+                    <div class="dial-ring dial-main-ticks" id="ring-ticks">
+                        <canvas id="ticks-canvas" width="560" height="560"></canvas>
+                    </div>
+
+                    <!-- Inner Counter-Rotating Ring (Counter-Clockwise -360deg 20s) -->
+                    <div class="dial-ring dial-inner-ring" id="ring-inner">
+                        <svg class="inner-svg" viewBox="0 0 400 400">
+                            <circle cx="200" cy="200" r="140" class="inner-circle-stroke" />
+                            <!-- 8 Orbital Nodes spaced at 45 deg -->
+                            <g class="orbital-nodes">
+                                <circle cx="200" cy="60" r="4" class="node-pip" />
+                                <circle cx="299" cy="101" r="4" class="node-pip" />
+                                <circle cx="340" cy="200" r="4" class="node-pip" />
+                                <circle cx="299" cy="299" r="4" class="node-pip" />
+                                <circle cx="200" cy="340" r="4" class="node-pip" />
+                                <circle cx="101" cy="299" r="4" class="node-pip" />
+                                <circle cx="60" cy="200" r="4" class="node-pip" />
+                                <circle cx="101" cy="101" r="4" class="node-pip" />
+                            </g>
+                        </svg>
+                    </div>
+
+                    <!-- Center Reticle (Independent 50% Speed Rotation) -->
+                    <div class="dial-ring dial-reticle" id="ring-reticle">
+                        <div class="reticle-line reticle-h"></div>
+                        <div class="reticle-line reticle-v"></div>
+                    </div>
+
+                    <!-- Center Information HUD Core -->
+                    <div class="dial-center-core" id="dial-core-btn">
+                        <div class="core-system-label">SYSTEM ENGINE v2.0</div>
+                        <div class="core-title">JARVIS</div>
+                        <div class="core-subtext" id="core-countdown">01:30 BEDTIME ANCHOR</div>
+                        <div class="core-status-pill" id="core-status-pill">NOMINAL</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Executive Dashboard Cards (Luxury Glassmorphic Grid) -->
+        <section class="cards-section">
+            <!-- Card 1: Circadian Anchor -->
+            <article class="glass-card circadian-card">
+                <div class="card-glow-disc disc-circadian"></div>
+                <div class="card-header">
+                    <span class="card-category">CIRCADIAN ANCHOR MODULE</span>
+                    <span class="status-indicator" id="circadian-level-badge">LEVEL 1</span>
+                </div>
+                <div class="card-body">
+                    <div class="metric-huge" id="circadian-countdown">--:--:--</div>
+                    <div class="metric-subtitle">COUNTDOWN TO 01:30 AM SLEEP WINDOW</div>
+                    <div class="metric-details">
+                        <span>Target Bedtime: <strong>01:30 AM</strong></span>
+                        <span>Wake Window: <strong>08:30 AM</strong></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 2: Distraction Shield -->
+            <article class="glass-card shield-card">
+                <div class="card-glow-disc disc-shield"></div>
+                <div class="card-header">
+                    <span class="card-category">DISTRACTION SHIELD MODULE</span>
+                    <button class="shield-toggle-btn" id="shield-toggle-btn">ENGAGE SHIELD</button>
+                </div>
+                <div class="card-body">
+                    <div class="metric-huge" id="shield-status-text">DISENGAGED</div>
+                    <div class="metric-subtitle" id="shield-vectors-sub">MONITORING 7 ENTERTAINMENT VECTORS</div>
+                    <div class="metric-details">
+                        <span>Blocked Breaches: <strong id="shield-breach-count">0</strong></span>
+                        <span>Mode: <strong id="shield-mode-label">STANDBY</strong></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 3: Dynamic Task Prioritizer -->
+            <article class="glass-card tasks-card">
+                <div class="card-glow-disc disc-tasks"></div>
+                <div class="card-header">
+                    <span class="card-category">DYNAMIC TASK PRIORITIZER</span>
+                    <span class="completion-rate" id="task-completion-rate">0% DONE</span>
+                </div>
+                <div class="card-body">
+                    <div class="task-input-bar">
+                        <input type="text" id="new-task-input" placeholder="Ingest directive (e.g. Deploy Edge Protocol p4)..." />
+                        <button id="add-task-btn">+</button>
+                    </div>
+                    <ul class="task-list" id="task-list">
+                        <!-- Populated via API -->
+                    </ul>
+                </div>
+            </article>
+
+            <!-- Card 4: Daily Analytics & Strictness -->
+            <article class="glass-card analytics-card">
+                <div class="card-glow-disc disc-analytics"></div>
+                <div class="card-header">
+                    <span class="card-category">DAILY ANALYTICS ENGINE</span>
+                    <button class="brief-btn" id="summary-brief-btn">EVENING BRIEF</button>
+                </div>
+                <div class="card-body">
+                    <div class="metric-huge" id="adherence-score-text">86.0%</div>
+                    <div class="metric-subtitle">BEHAVIORAL ADHERENCE METRIC</div>
+                    <div class="metric-details">
+                        <span>Strictness Level: <strong id="strictness-level-text">LEVEL 1 (NOMINAL)</strong></span>
+                        <span>Completed Tasks: <strong id="tasks-done-text">0 / 0</strong></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 5: Hardware Telemetry -->
+            <article class="glass-card telemetry-card">
+                <div class="card-glow-disc disc-telem"></div>
+                <div class="card-header">
+                    <span class="card-category">HARDWARE TELEMETRY</span>
+                    <span class="telemetry-speed" id="telem-latency">SUB-MS ENGINE</span>
+                </div>
+                <div class="card-body telem-grid">
+                    <div class="telem-item">
+                        <span class="telem-label">CPU LOAD</span>
+                        <span class="telem-val" id="cpu-load-val">--%</span>
+                    </div>
+                    <div class="telem-item">
+                        <span class="telem-label">MEMORY</span>
+                        <span class="telem-val" id="ram-load-val">--%</span>
+                    </div>
+                    <div class="telem-item">
+                        <span class="telem-label">BATTERY</span>
+                        <span class="telem-val" id="battery-load-val">--%</span>
+                    </div>
+                    <div class="telem-item">
+                        <span class="telem-label">STORAGE</span>
+                        <span class="telem-val" id="disk-load-val">--%</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <!-- Command Console & Audio HUD -->
+        <footer class="console-footer">
+            <div class="console-bar">
+                <span class="console-prompt">&gt;</span>
+                <input type="text" id="cli-input" placeholder="Issue directive to Jarvis (e.g., 'report status', 'shield on', 'sleep compliance')..." />
+                <button id="cli-voice-btn" class="mic-btn" title="Toggle Voice Response">VOICE: ON</button>
+                <button id="cli-send-btn" class="send-btn">EXECUTE</button>
+            </div>
+            <div class="console-output" id="console-output">
+                System standing by. Deterministic Zero-LLM architecture online.
+            </div>
+        </footer>
+    </div>
+
+    <!-- Executive Brief Modal -->
+    <div id="brief-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>JARVIS EXECUTIVE SUMMARY</h3>
+                <button id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-content">
+                Loading executive analytics...
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
