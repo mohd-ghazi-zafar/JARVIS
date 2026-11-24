@@ -9,7 +9,9 @@ import re
 import sys
 from typing import Any
 
+from core.analytics import calculate_historical_adherence, generate_evening_summary
 from core.circadian import format_circadian_speech, get_circadian_status
+from core.shield import enforce_shield, get_shield_status, toggle_shield
 from core.tasks import add_task, complete_task, get_daily_metrics, list_tasks
 from core.telemetry import format_telemetry_speech, get_hardware_telemetry
 from core.voice import alert_beep, speak
@@ -35,6 +37,10 @@ def process_command(raw_input: str, voice_enabled: bool = False) -> IntentRespon
 
     if not query:
         return IntentResponse("none", "Awaiting command, Boss.")
+
+    # Fast Ping / Heartbeat
+    if lower == "ping":
+        return IntentResponse("ping", "Pong. Subsystems operational, Boss.", {"status": "nominal"})
 
     # 1. Task Management: Add Task (Evaluated first to allow keywords like 'memory' or 'cpu' in task titles)
     add_match = re.search(r"(?:add task|new task|create task|task add)\s+(.+)", lower)
@@ -122,7 +128,38 @@ def process_command(raw_input: str, voice_enabled: bool = False) -> IntentRespon
         return IntentResponse("circadian_anchor", speech, {"circadian": circadian})
 
 
-    # 7. Voice Output Directive
+    # 7. Distraction Shield Directive
+    if any(k in lower for k in ["shield", "distraction", "focus block", "block distractions"]):
+        if any(w in lower for w in ["on", "enable", "start", "activate", "block"]):
+            status = toggle_shield(True, work_block_label="Work Session Focus")
+            enforce = enforce_shield()
+            term_str = f" Terminated: {', '.join(enforce['terminated'])}." if enforce["terminated"] else ""
+            speech = f"Distraction Shield engaged, Boss. Entertainment vectors restricted.{term_str}"
+            if voice_enabled:
+                speak(speech)
+            return IntentResponse("shield_toggle", speech, {"shield": status, "enforcement": enforce})
+        elif any(w in lower for w in ["off", "disable", "stop", "deactivate"]):
+            status = toggle_shield(False)
+            speech = "Distraction Shield disengaged, Boss. Systems standing down to normal posture."
+            if voice_enabled:
+                speak(speech)
+            return IntentResponse("shield_toggle", speech, {"shield": status})
+        else:
+            status = get_shield_status()
+            speech = f"Distraction Shield is {status['mode']}, Boss. Total breaches blocked: {status['breaches_detected_total']}."
+            if voice_enabled:
+                speak(speech)
+            return IntentResponse("shield_status", speech, {"shield": status})
+
+    # 8. Daily Analytics Engine & Evening Summary
+    if any(k in lower for k in ["evening summary", "daily summary", "summary", "daily brief", "adherence", "habit"]):
+        summary = generate_evening_summary()
+        speech = summary["executive_summary"]
+        if voice_enabled:
+            speak(speech)
+        return IntentResponse("evening_summary", speech, {"summary": summary})
+
+    # 9. Voice Output Directive
     speak_match = re.search(r"^(?:say|speak|announce)\s+(.+)", lower)
     if speak_match:
         text_to_speak = query[speak_match.start(1):].strip()

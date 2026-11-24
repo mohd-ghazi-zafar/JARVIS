@@ -34,7 +34,7 @@ def get_hardware_telemetry() -> dict[str, Any]:
 
     return {
         "available": True,
-        "cpu_percent": psutil.cpu_percent(interval=0.1),
+        "cpu_percent": psutil.cpu_percent(interval=None),
         "ram_used_gb": round(vm.used / (1024**3), 2),
         "ram_total_gb": round(vm.total / (1024**3), 2),
         "ram_percent": vm.percent,

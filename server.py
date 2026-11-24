@@ -8,8 +8,10 @@ import sys
 from typing import Any
 
 from config import HOST, PORT
+from core.analytics import generate_evening_summary
 from core.circadian import get_circadian_status
 from core.intent_router import process_command
+from core.shield import enforce_shield, get_shield_status, toggle_shield
 from core.tasks import add_task, complete_task, get_daily_metrics, list_tasks
 from core.telemetry import get_hardware_telemetry
 
@@ -78,6 +80,20 @@ if HAS_FASTAPI:
         if not res:
             raise HTTPException(status_code=404, detail="Task not found")
         return {"success": True, "task": res}
+
+    @app.get("/shield/status")
+    async def shield_status() -> dict[str, Any]:
+        return get_shield_status()
+
+    @app.post("/shield/toggle")
+    async def shield_toggle(enabled: bool = True, label: str = "Focus Work Block") -> dict[str, Any]:
+        status = toggle_shield(enabled, work_block_label=label)
+        enforce = enforce_shield() if enabled else {}
+        return {"shield": status, "enforcement": enforce}
+
+    @app.get("/analytics/summary")
+    async def analytics_summary() -> dict[str, Any]:
+        return generate_evening_summary()
 
 
 def start_server() -> None:
