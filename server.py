@@ -261,12 +261,14 @@ class JarvisHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 def start_server() -> None:
+    display_host = "localhost" if HOST in ["0.0.0.0", "::"] else HOST
     print("=" * 65)
     print("    JARVIS AUTONOMOUS ENGINE & HUD SERVER")
     print("=" * 65)
     print(f"[*] Core Architecture : Zero-LLM Deterministic (< 1ms Latency)")
-    print(f"[*] Server Listening   : http://{HOST}:{PORT}")
-    print(f"[*] Frontend Web HUD  : http://{HOST}:{PORT}/")
+    print(f"[*] Server Bound       : {HOST}:{PORT}")
+    print(f"[*] Frontend Web HUD   : http://{display_host}:{PORT}/")
+    print(f"[*] Local Loopback URL : http://127.0.0.1:{PORT}/")
     print("=" * 65)
 
     if HAS_FASTAPI:
