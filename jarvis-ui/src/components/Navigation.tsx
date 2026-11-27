@@ -1,8 +1,8 @@
 import React from 'react';
-import { Moon, Target, BarChart3 } from 'lucide-react';
+import { Compass, Moon, Target, BarChart3 } from 'lucide-react';
 import { sound } from '../utils/audio';
 
-export type ActiveTab = 'circadian' | 'tasks' | 'analytics';
+export type ActiveTab = 'core' | 'circadian' | 'tasks' | 'analytics';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -11,9 +11,10 @@ interface NavigationProps {
 
 export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'circadian', label: 'Circadian', icon: <Moon size={18} /> },
-    { id: 'tasks', label: 'Prioritizer', icon: <Target size={18} /> },
-    { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
+    { id: 'core', label: 'Core', icon: <Compass size={16} /> },
+    { id: 'circadian', label: 'Circadian', icon: <Moon size={16} /> },
+    { id: 'tasks', label: 'Prioritizer', icon: <Target size={16} /> },
+    { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={16} /> },
   ];
 
   return (
@@ -23,13 +24,15 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
         bottom: '20px',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 'calc(100% - 40px)',
-        maxWidth: '380px',
+        width: 'calc(100% - 32px)',
+        maxWidth: '410px',
         backgroundColor: 'var(--card-alabaster)',
-        padding: '6px 8px',
+        padding: '5px',
         borderRadius: '999px',
         display: 'flex',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '4px',
         boxShadow: 'var(--shadow-float)',
         border: '1px solid var(--border-subtle)',
         zIndex: 50,
@@ -47,16 +50,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
-              padding: '10px 18px',
+              padding: '9px 12px',
               borderRadius: '999px',
               border: 'none',
               backgroundColor: isActive ? 'var(--accent-slate)' : 'transparent',
               color: isActive ? 'var(--white)' : 'var(--text-secondary)',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              flex: 1,
             }}
           >
             {tab.icon}

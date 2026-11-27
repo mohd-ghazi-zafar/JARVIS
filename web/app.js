@@ -4,8 +4,10 @@
  * mathematical boolean moon / 8-ray sun canvas morph, and real-time API bindings.
  */
 
-// API Configuration
-const API_BASE = window.location.origin.startsWith('http') ? window.location.origin : 'http://127.0.0.1:8765';
+// API Configuration (Reconciled with /api routing and fallback)
+const API_BASE = window.location.origin.startsWith('http')
+    ? `${window.location.origin}/api`
+    : 'http://127.0.0.1:8000/api';
 
 // State
 let voiceEnabled = true;

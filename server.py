@@ -24,7 +24,7 @@ from core.telemetry import get_hardware_telemetry
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
 try:
-    from fastapi import FastAPI, HTTPException
+    from fastapi import FastAPI, HTTPException, APIRouter
     from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel, Field
     import uvicorn
@@ -39,6 +39,7 @@ if HAS_FASTAPI:
         description="High-speed, zero-LLM deterministic system core",
         version="2.0.0",
     )
+    api_router = APIRouter()
 
     class CommandRequest(BaseModel):
         command: str = Field(..., min_length=1)
@@ -51,7 +52,7 @@ if HAS_FASTAPI:
     class TaskCompleteRequest(BaseModel):
         task_id: int
 
-    @app.get("/health")
+    @api_router.get("/health")
     async def health() -> dict[str, str]:
         return {
             "status": "online",
@@ -59,53 +60,57 @@ if HAS_FASTAPI:
             "latency": "<1ms",
         }
 
-    @app.post("/command")
+    @api_router.post("/command")
     async def execute_command(req: CommandRequest) -> dict[str, Any]:
         result = process_command(req.command, voice_enabled=req.voice)
         return result.to_dict()
 
-    @app.get("/telemetry")
+    @api_router.get("/telemetry")
     async def telemetry() -> dict[str, Any]:
         return get_hardware_telemetry()
 
-    @app.get("/circadian")
+    @api_router.get("/circadian")
     async def circadian() -> dict[str, Any]:
         return get_circadian_status()
 
-    @app.get("/tasks")
+    @api_router.get("/tasks")
     async def tasks() -> dict[str, Any]:
         return {
             "tasks": list_tasks(include_completed=False),
             "metrics": get_daily_metrics(),
         }
 
-    @app.post("/tasks")
+    @api_router.post("/tasks")
     async def create_task(req: TaskAddRequest) -> dict[str, Any]:
         return add_task(req.title, req.priority)
 
-    @app.post("/tasks/complete")
+    @api_router.post("/tasks/complete")
     async def mark_task_complete(req: TaskCompleteRequest) -> dict[str, Any]:
         res = complete_task(req.task_id)
         if not res:
             raise HTTPException(status_code=404, detail="Task not found")
         return {"success": True, "task": res}
 
-    @app.get("/shield/status")
+    @api_router.get("/shield/status")
     async def shield_status() -> dict[str, Any]:
         return get_shield_status()
 
-    @app.post("/shield/toggle")
+    @api_router.post("/shield/toggle")
     async def shield_toggle(enabled: bool = True, label: str = "Focus Work Block") -> dict[str, Any]:
         status = toggle_shield(enabled, work_block_label=label)
         enforce = enforce_shield() if enabled else {}
         return {"shield": status, "enforcement": enforce}
 
-    @app.get("/analytics/summary")
+    @api_router.get("/analytics/summary")
     async def analytics_summary() -> dict[str, Any]:
         return generate_evening_summary()
 
+    # Reconcile public paths: support /api/ prefix (Vercel rewrite) and root / prefix (local)
+    app.include_router(api_router, prefix="/api")
+    app.include_router(api_router)
+
     if WEB_DIR.exists():
-        app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
+        app.mount("/hud", StaticFiles(directory=str(WEB_DIR), html=True), name="hud")
 
 
 # ==========================================================================
@@ -151,6 +156,8 @@ class JarvisHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
+        if path.startswith("/api/"):
+            path = "/" + path[5:]
 
         # Static File Routing
         if path in ["/", "/index.html"]:
@@ -207,6 +214,8 @@ class JarvisHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
+        if path.startswith("/api/"):
+            path = "/" + path[5:]
 
         # Read JSON payload if present
         content_length = int(self.headers.get("Content-Length", 0))

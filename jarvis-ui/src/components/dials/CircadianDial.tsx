@@ -71,9 +71,11 @@ export const CircadianDial: React.FC<CircadianDialProps> = ({
     const newTime = minutesToTime(snappedMins);
 
     if (activeThumb === 'sleep' && newTime !== sleepTime) {
+      if (newTime === wakeTime) return;
       onTimeChange(newTime, wakeTime);
       sound.playDialClick(1100);
     } else if (activeThumb === 'wake' && newTime !== wakeTime) {
+      if (newTime === sleepTime) return;
       onTimeChange(sleepTime, newTime);
       sound.playDialClick(1500);
     }

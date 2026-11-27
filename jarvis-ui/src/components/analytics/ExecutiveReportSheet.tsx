@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Copy, Check, Terminal } from 'lucide-react';
 import type { JarvisGlobalState } from '../../types';
 import { sound } from '../../utils/audio';
@@ -16,15 +16,18 @@ export const ExecutiveReportSheet: React.FC<ExecutiveReportSheetProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
-
   const currentMetric = state.metrics[state.selectedMetricDayIndex] || state.metrics[state.metrics.length - 1];
   const pendingCount = state.tasks.filter((t) => !t.completed).length;
   const completedCount = state.tasks.filter((t) => t.completed).length;
   const totalTasks = state.tasks.length;
   const completionRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 100;
 
-  const reportText = `[JARVIS EXECUTIVE DEBRIEF - ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}]
+  const formattedDate = useMemo(() => {
+    return currentMetric?.date ? `Date: ${currentMetric.date} (${currentMetric.day})` : 'Current Operational Cycle';
+  }, [currentMetric]);
+
+  const reportText = useMemo(() => {
+    return `[JARVIS EXECUTIVE DEBRIEF - ${formattedDate}]
 ------------------------------------------------------------
 1. CIRCADIAN ANCHOR COMPLIANCE:
    • Sleep Window: ${state.circadian.sleepTime} - ${state.circadian.wakeTime}
@@ -44,6 +47,9 @@ export const ExecutiveReportSheet: React.FC<ExecutiveReportSheetProps> = ({
    • Distraction Shield Posture: ${state.settings.autoDistractionShield ? 'ACTIVE INTERCEPTION' : 'MANUAL'}
 ------------------------------------------------------------
 Axiom: Zero conversational filler. Execution proceeding within parameters.`;
+  }, [formattedDate, state.circadian.sleepTime, state.circadian.wakeTime, state.circadian.isLocked, state.settings.strictnessLevel, state.settings.autoDistractionShield, currentMetric.sleepDurationHours, currentMetric.adherenceScore, currentMetric.deepWorkHours, totalTasks, completedCount, pendingCount, completionRate]);
+
+  if (!isOpen) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(reportText);

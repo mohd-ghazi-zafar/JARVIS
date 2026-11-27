@@ -11,6 +11,12 @@ import time
 from config import SYSTEM_NAME, USER_TITLE
 from core.intent_router import process_command
 
+# Expose FastAPI application instance for Vercel Services entrypoint
+try:
+    from server import app
+except Exception:
+    app = None
+
 
 def run_cli() -> None:
     print("=" * 65)

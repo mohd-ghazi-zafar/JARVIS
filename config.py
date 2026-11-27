@@ -9,7 +9,12 @@ from pathlib import Path
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
-STORAGE_DIR = BASE_DIR / "storage"
+# In Vercel serverless runtime, only /tmp is writable for SQLite persistence
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    STORAGE_DIR = Path("/tmp") / "jarvis_storage"
+else:
+    STORAGE_DIR = BASE_DIR / "storage"
+
 DATABASE_PATH = STORAGE_DIR / "jarvis.db"
 
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)

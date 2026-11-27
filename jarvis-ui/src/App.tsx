@@ -3,11 +3,14 @@ import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import type { ActiveTab } from './components/Navigation';
 import { SettingsModal } from './components/SettingsModal';
+import { MasterCircadianTaskDial } from './components/dials/MasterCircadianTaskDial';
+import { CommandCoreControls } from './components/circadian/CommandCoreControls';
 import { CircadianDial } from './components/dials/CircadianDial';
 import { CircadianControls } from './components/circadian/CircadianControls';
 import { WeeklyRhythmSheet } from './components/circadian/WeeklyRhythmSheet';
 import { PrioritizerDial } from './components/dials/PrioritizerDial';
 import { TaskCard } from './components/tasks/TaskCard';
+import { IntegratedLedger } from './components/tasks/IntegratedLedger';
 import { AddTaskModal } from './components/tasks/AddTaskModal';
 import { TaskActionSheet } from './components/tasks/TaskActionSheet';
 import { AnalyticsDial } from './components/dials/AnalyticsDial';
@@ -15,17 +18,18 @@ import { ExecutiveReportSheet } from './components/analytics/ExecutiveReportShee
 import { loadState, saveState, resetState } from './utils/storage';
 import type { JarvisGlobalState, PriorityBand, TaskItem } from './types';
 import { sound } from './utils/audio';
-import { Plus, FileText, CheckCircle2 } from 'lucide-react';
+import { FileText, CheckCircle2, Plus } from 'lucide-react';
 
 export function App() {
   const [state, setState] = useState<JarvisGlobalState>(loadState);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('circadian');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('core');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRhythmSheetOpen, setIsRhythmSheetOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [selectedTaskForAction, setSelectedTaskForAction] = useState<TaskItem | null>(null);
   const [isReportSheetOpen, setIsReportSheetOpen] = useState(false);
   const [analyticsTimeframe, setAnalyticsTimeframe] = useState<'Day' | 'Week' | 'Month'>('Week');
+  const [isShieldActive, setIsShieldActive] = useState(false);
 
   // Sync to localStorage
   useEffect(() => {
@@ -45,8 +49,15 @@ export function App() {
       setState((prev) => {
         if (prev.focusSession.remainingSeconds <= 1) {
           sound.playFocusBell();
+          const focusHrs = Number((prev.focusSession.durationMinutes / 60).toFixed(1));
+          const updatedMetrics = prev.metrics.map((m, idx) =>
+            idx === prev.selectedMetricDayIndex
+              ? { ...m, deepWorkHours: Number((m.deepWorkHours + focusHrs).toFixed(1)) }
+              : m
+          );
           return {
             ...prev,
+            metrics: updatedMetrics,
             focusSession: {
               ...prev.focusSession,
               active: false,
@@ -68,7 +79,7 @@ export function App() {
     return () => clearInterval(interval);
   }, [state.focusSession.active, state.focusSession.paused]);
 
-  // Circadian Handlers
+  // Circadian Schedule Adjustments
   const handleTimeChange = (sleep: string, wake: string) => {
     setState((prev) => ({
       ...prev,
@@ -125,8 +136,8 @@ export function App() {
     sound.playDialClick(1500);
   };
 
-  // Task & Focus Handlers
-  const handleDurationChange = (minutes: number) => {
+  // Focus Session Controls
+  const handleSelectDuration = (minutes: number) => {
     setState((prev) => ({
       ...prev,
       focusSession: {
@@ -152,6 +163,9 @@ export function App() {
       const fs = prev.focusSession;
       if (!fs.active) {
         sound.playDialClick(1600);
+        if (prev.settings.autoDistractionShield) {
+          setIsShieldActive(true);
+        }
         return {
           ...prev,
           focusSession: {
@@ -175,19 +189,40 @@ export function App() {
     });
   };
 
-  const handleResetTimer = () => {
+  const handleResetFocus = () => {
     setState((prev) => ({
       ...prev,
       focusSession: {
         ...prev.focusSession,
         active: false,
         paused: false,
+        taskId: null,
         remainingSeconds: prev.focusSession.durationMinutes * 60,
       },
     }));
     sound.playDialClick(900);
   };
 
+  const handleStartFocusOnTask = (task: TaskItem) => {
+    setState((prev) => ({
+      ...prev,
+      focusSession: {
+        active: true,
+        paused: false,
+        band: task.priority,
+        durationMinutes: task.estimatedMinutes,
+        remainingSeconds: task.estimatedMinutes * 60,
+        taskId: task.id,
+        sessionStartTime: Date.now(),
+      },
+    }));
+    if (state.settings.autoDistractionShield) {
+      setIsShieldActive(true);
+    }
+    sound.playDialClick(1500);
+  };
+
+  // Task Ledger Operations
   const handleAddTask = (title: string, priority: PriorityBand, estimatedMins: number) => {
     const urgency = priority === 'deep_focus' ? 10.0 : priority === 'quick_win' ? 7.5 : 3.0;
     const newTask: TaskItem = {
@@ -221,21 +256,6 @@ export function App() {
     }));
   };
 
-  const handleStartFocusOnTask = (task: TaskItem) => {
-    setState((prev) => ({
-      ...prev,
-      focusSession: {
-        active: true,
-        paused: false,
-        band: task.priority,
-        durationMinutes: task.estimatedMinutes,
-        remainingSeconds: task.estimatedMinutes * 60,
-        taskId: task.id,
-        sessionStartTime: Date.now(),
-      },
-    }));
-  };
-
   const handleChangeTaskPriority = (taskId: string, newPriority: PriorityBand) => {
     const newUrgency = newPriority === 'deep_focus' ? 10.0 : newPriority === 'quick_win' ? 7.5 : 3.0;
     setState((prev) => ({
@@ -250,27 +270,31 @@ export function App() {
     setState((prev) => ({
       ...prev,
       tasks: prev.tasks.filter((t) => t.id !== taskId),
+      focusSession:
+        prev.focusSession.taskId === taskId
+          ? { ...prev.focusSession, taskId: null }
+          : prev.focusSession,
     }));
   };
 
-  // Reset System Handler
+  // Reset to Defaults
   const handleResetDefaults = () => {
     const fresh = resetState();
     setState(fresh);
+    setIsShieldActive(false);
   };
+
+  const activeTask = state.tasks.find((t) => t.id === state.focusSession.taskId) || null;
+  const currentDayMetric = state.metrics[state.selectedMetricDayIndex] || state.metrics[state.metrics.length - 1];
 
   const getHeaderTitle = () => {
     switch (activeTab) {
-      case 'circadian':
-        return 'Circadian Anchor';
-      case 'tasks':
-        return 'Dynamic Task Prioritizer';
-      case 'analytics':
-        return 'Daily Analytics Engine';
+      case 'core': return 'Command Core';
+      case 'circadian': return 'Circadian Anchor';
+      case 'tasks': return 'Task Prioritizer';
+      case 'analytics': return 'Daily Analytics';
     }
   };
-
-  const currentDayMetric = state.metrics[state.selectedMetricDayIndex] || state.metrics[state.metrics.length - 1];
 
   return (
     <div className="app-viewport">
@@ -278,30 +302,53 @@ export function App() {
       <Header
         title={getHeaderTitle()}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        showBack={false}
+        showBack={activeTab !== 'core'}
+        onPrevModule={() => setActiveTab('core')}
       />
 
-      {/* MODULE 1: CIRCADIAN ANCHOR */}
-      {activeTab === 'circadian' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {/* Continuous Rotating 24-Hour Dial */}
-          <CircadianDial
+      {/* VIEW 1: UNIFIED COMMAND CORE (Circadian Anchor + Task Prioritizer Cockpit) */}
+      {activeTab === 'core' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+          {/* 24-Hour Master Circadian & Focus Dial */}
+          <MasterCircadianTaskDial
             sleepTime={state.circadian.sleepTime}
             wakeTime={state.circadian.wakeTime}
             isLocked={state.circadian.isLocked}
             onTimeChange={handleTimeChange}
+            focusSession={state.focusSession}
+            activeTask={activeTask}
+            onToggleFocus={handleTogglePlayFocus}
+            onResetFocus={handleResetFocus}
+            windDownLeadMinutes={state.circadian.windDownLeadMinutes}
           />
 
-          {/* 3 Horizontal Controls: Lock Schedule, Wind-Down, Grace +15m */}
-          <CircadianControls
+          {/* Core Controls Strip: Lock, Focus Duration, Shield Toggle */}
+          <CommandCoreControls
             schedule={state.circadian}
             onToggleLock={handleToggleLock}
+            selectedDuration={state.focusSession.durationMinutes}
+            onSelectDuration={handleSelectDuration}
+            isShieldActive={isShieldActive}
+            onToggleShield={() => setIsShieldActive(!isShieldActive)}
             onToggleWindDown={handleToggleWindDown}
             onSelectLeadTime={handleSelectLeadTime}
             onAddGrace={handleAddGrace}
+            onOpenRhythmSheet={() => setIsRhythmSheetOpen(!isRhythmSheetOpen)}
           />
 
-          {/* Slide-Up Weekly Rhythm Sheet at bottom */}
+          {/* Integrated Directives Ledger */}
+          <IntegratedLedger
+            tasks={state.tasks}
+            activeTaskId={state.focusSession.taskId}
+            isSessionActive={state.focusSession.active}
+            isSessionPaused={state.focusSession.paused}
+            onToggleTaskComplete={handleToggleTaskComplete}
+            onStartFocusOnTask={handleStartFocusOnTask}
+            onOpenActions={(t) => setSelectedTaskForAction(t)}
+            onOpenAddTask={() => setIsAddTaskOpen(true)}
+          />
+
+          {/* Slide-Up Weekly Rhythm Sheet */}
           <WeeklyRhythmSheet
             metrics={state.metrics}
             isOpen={isRhythmSheetOpen}
@@ -310,63 +357,96 @@ export function App() {
         </div>
       )}
 
-      {/* MODULE 2: DYNAMIC TASK PRIORITIZER */}
-      {activeTab === 'tasks' && (
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {/* Rotating Focus Dial */}
-          <PrioritizerDial
-            session={state.focusSession}
-            onDurationChange={handleDurationChange}
-            onBandChange={handleBandChange}
-            onTogglePlay={handleTogglePlayFocus}
-            onResetTimer={handleResetTimer}
+      {/* VIEW 2: CIRCADIAN ANCHOR (Pure 1:1 Design Replica of the Screenshot) */}
+      {activeTab === 'circadian' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', position: 'relative' }}>
+          {/* Pure 24-Hour Circadian Dial */}
+          <CircadianDial
+            sleepTime={state.circadian.sleepTime}
+            wakeTime={state.circadian.wakeTime}
+            isLocked={state.circadian.isLocked}
+            onTimeChange={handleTimeChange}
           />
 
-          {/* Directives Ledger Header & Add Action */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: '28px',
-              marginBottom: '14px',
-              padding: '0 4px',
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Urgent Directives Ledger
-              </h2>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                {state.tasks.filter((t) => !t.completed).length} Pending • Dynamically Prioritized
+          {/* 3 Horizontal Pill Cards matching user screenshot */}
+          <CircadianControls
+            schedule={state.circadian}
+            onToggleLock={handleToggleLock}
+            onToggleWindDown={handleToggleWindDown}
+            onSelectLeadTime={handleSelectLeadTime}
+            onAddGrace={handleAddGrace}
+          />
+
+          {/* Slide-Up Weekly Rhythm Sheet at bottom of screen */}
+          <WeeklyRhythmSheet
+            metrics={state.metrics}
+            isOpen={isRhythmSheetOpen}
+            onToggle={() => setIsRhythmSheetOpen(!isRhythmSheetOpen)}
+          />
+        </div>
+      )}
+
+      {/* VIEW 3: DYNAMIC TASK PRIORITIZER (Urgency Dial & Session Execution) */}
+      {activeTab === 'tasks' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+          {/* Priority Dial */}
+          <PrioritizerDial
+            session={state.focusSession}
+            onDurationChange={handleSelectDuration}
+            onBandChange={handleBandChange}
+            onTogglePlay={handleTogglePlayFocus}
+            onResetTimer={handleResetFocus}
+          />
+
+          {/* Standalone Directives Ledger Header */}
+          <div style={{ width: '100%', marginTop: '24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '12px',
+                padding: '0 4px',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Active Directives
+                </h2>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {state.tasks.filter((t) => !t.completed).length} Pending • Ordered by Urgency
+                </div>
               </div>
+
+              <button
+                onClick={() => {
+                  setIsAddTaskOpen(true);
+                  sound.playDialClick(1400);
+                }}
+                className="pill-action"
+                style={{ padding: '7px 12px', fontSize: '12px' }}
+              >
+                <Plus size={13} />
+                <span>Log Directive</span>
+              </button>
             </div>
 
-            <button
-              onClick={() => setIsAddTaskOpen(true)}
-              className="pill-action"
-              style={{ padding: '8px 14px', fontSize: '12px' }}
-            >
-              <Plus size={14} />
-              <span>Log Directive</span>
-            </button>
-          </div>
-
-          {/* Task Cards List */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {state.tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onToggleComplete={handleToggleTaskComplete}
-                onOpenActions={(t) => setSelectedTaskForAction(t)}
-              />
-            ))}
+            {/* Task Cards List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {state.tasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onToggleComplete={handleToggleTaskComplete}
+                  onOpenActions={(t) => setSelectedTaskForAction(t)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* MODULE 3: DAILY ANALYTICS ENGINE */}
+      {/* VIEW 4: DAILY ANALYTICS ENGINE (Consistency & Output) */}
       {activeTab === 'analytics' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
           {/* Timeframe Selector Tabs */}
@@ -472,7 +552,7 @@ export function App() {
         </div>
       )}
 
-      {/* Bottom Floating Navigation Pill */}
+      {/* Bottom Floating Navigation Pill (4 Tabs: Core | Circadian | Prioritizer | Analytics) */}
       <Navigation activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
 
       {/* Modals & Action Sheets */}

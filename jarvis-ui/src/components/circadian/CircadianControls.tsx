@@ -19,23 +19,17 @@ export const CircadianControls: React.FC<CircadianControlsProps> = ({
   onAddGrace,
 }) => {
   const [showLeadOptions, setShowLeadOptions] = useState(false);
-  const [graceSecondsLeft, setGraceSecondsLeft] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // Countdown timer for active grace period
   useEffect(() => {
-    if (!schedule.graceExpiresAt) {
-      setGraceSecondsLeft(0);
-      return;
-    }
-    const update = () => {
-      const now = Date.now();
-      const diff = Math.max(0, Math.floor((schedule.graceExpiresAt! - now) / 1000));
-      setGraceSecondsLeft(diff);
-    };
-    update();
-    const interval = setInterval(update, 1000);
+    if (!schedule.graceExpiresAt) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [schedule.graceExpiresAt]);
+
+  const graceSecondsLeft = schedule.graceExpiresAt
+    ? Math.max(0, Math.floor((schedule.graceExpiresAt - nowMs) / 1000))
+    : 0;
 
   const graceMins = Math.floor(graceSecondsLeft / 60);
   const graceSecs = graceSecondsLeft % 60;

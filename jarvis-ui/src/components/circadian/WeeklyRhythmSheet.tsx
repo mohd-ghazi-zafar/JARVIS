@@ -22,23 +22,26 @@ export const WeeklyRhythmSheet: React.FC<WeeklyRhythmSheetProps> = ({
   );
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: '0',
-        left: '0',
-        right: '0',
-        backgroundColor: 'var(--card-alabaster)',
-        borderTopLeftRadius: '32px',
-        borderTopRightRadius: '32px',
-        boxShadow: '0 -6px 30px rgba(35, 50, 40, 0.08)',
-        border: '1px solid var(--border-subtle)',
-        padding: '16px 24px 28px 24px',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        transform: isOpen ? 'translateY(0)' : 'translateY(calc(100% - 110px))',
-        zIndex: 40,
-      }}
-    >
+    <>
+      {isOpen && <div className="sheet-backdrop" onClick={onToggle} style={{ zIndex: 104 }} />}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '0',
+          left: '50%',
+          transform: isOpen ? 'translate(-50%, 0)' : 'translate(-50%, calc(100% - 152px))',
+          width: '100%',
+          maxWidth: '440px',
+          backgroundColor: 'var(--card-alabaster)',
+          borderTopLeftRadius: '32px',
+          borderTopRightRadius: '32px',
+          boxShadow: isOpen ? '0 -10px 40px rgba(25, 38, 30, 0.2)' : '0 -6px 30px rgba(35, 50, 40, 0.08)',
+          border: '1px solid var(--border-subtle)',
+          padding: '16px 24px 84px 24px',
+          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          zIndex: isOpen ? 105 : 40,
+        }}
+      >
       {/* Grabber Handle & Header Trigger */}
       <div
         onClick={() => {
@@ -157,5 +160,6 @@ export const WeeklyRhythmSheet: React.FC<WeeklyRhythmSheetProps> = ({
         </div>
       )}
     </div>
+    </>
   );
 };
